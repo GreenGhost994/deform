@@ -6,6 +6,7 @@ import threading
 import time
 import math
 from components.elements import Vertex, Model, Line
+from components.model_canvas import *
 
 class VertexDialog(tb.Toplevel):
     def __init__(self, parent, selected_vertex, mode=1):
@@ -63,18 +64,18 @@ class VertexDialog(tb.Toplevel):
         self.selected_vertex.y = float(self.v_y_entry.get())
         self.selected_vertex.comment = self.comment_entry.get()
         self.selected_vertex.id = None
-        app.post_edit_vertex(self.selected_vertex)
+        app.post_edit_element(self.selected_vertex)
 
     def apply_changes(self):
         self.selected_vertex.x = float(self.v_x_entry.get())
         self.selected_vertex.y = float(self.v_y_entry.get())
         self.selected_vertex.comment = self.comment_entry.get()
 
-        app.post_edit_vertex(self.selected_vertex)
+        app.post_edit_element(self.selected_vertex)
         self.destroy()
 
     def delete_vertex(self):
-        app.post_delete_vertex(self.selected_vertex)
+        app.post_delete_element(self.selected_vertex)
         self.destroy()
 
     def on_close(self, event=None):
@@ -83,6 +84,105 @@ class VertexDialog(tb.Toplevel):
         else:
             app.create_vertex(None)
         
+
+class LineDialog(tb.Toplevel):
+    def __init__(self, parent, selected_line, mode=1):
+        super().__init__(parent)
+        self.parent = parent
+        self.mode = mode
+        self.selected_line = selected_line
+        self.attributes("-topmost", True)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.bind("<Escape>", self.on_close)
+        self.focus_force()
+        self.title(f"Edit Line: {selected_line.id}")
+        if self.mode == 0:
+            self.title("Add Line")
+        self.geometry("200x300")
+        self.wm_attributes('-toolwindow', 'True')
+
+        coordinate_frame = tb.Frame(self)
+        coordinate_frame.pack(fill="x", expand=True, padx=15)
+
+        x1_label = tb.LabelFrame(coordinate_frame, text="X")
+        x1_label.pack(side="left", fill="x", expand=True)
+        self.x1_entry = tb.Entry(x1_label, width=5, bootstyle="danger")
+        self.x1_entry.insert(0, self.selected_line.start.x)
+        self.x1_entry.pack(fill="x", expand=True)
+
+        y1_label = tb.LabelFrame(coordinate_frame, text="Y")
+        y1_label.pack(side="left", fill="x", expand=True)
+        self.y1_entry = tb.Entry(y1_label, width=5, bootstyle="success")
+        self.y1_entry.insert(0, self.selected_line.start.y)
+        self.y1_entry.pack(fill="x", expand=True)
+
+        coordinate_frame = tb.Frame(self)
+        coordinate_frame.pack(fill="x", expand=True, padx=15)
+
+        x2_label = tb.LabelFrame(coordinate_frame, text="X")
+        x2_label.pack(side="left", fill="x", expand=True)
+        self.x2_entry = tb.Entry(x2_label, width=5, bootstyle="danger")
+        self.x2_entry.insert(0, self.selected_line.end.x)
+        self.x2_entry.pack(fill="x", expand=True)
+
+        y2_label = tb.LabelFrame(coordinate_frame, text="Y")
+        y2_label.pack(side="left", fill="x", expand=True)
+        self.y2_entry = tb.Entry(y2_label, width=5, bootstyle="success")
+        self.y2_entry.insert(0, self.selected_line.end.y)
+        self.y2_entry.pack(fill="x", expand=True)
+
+        comment_label = tb.LabelFrame(self, text="Comment")
+        comment_label.pack(fill="x", expand=True, padx=15)
+        self.comment_entry = tb.Entry(comment_label)
+        self.comment_entry.insert(0, self.selected_line.comment)
+        self.comment_entry.pack(fill="x", expand=True)
+
+        button_frame = tb.Frame(self)
+        button_frame.pack(fill="x", expand=True, padx=15)
+
+        if self.mode == 0:
+            self.add_button = tb.Button(button_frame, text="Add", command=self.add_line, bootstyle="light")
+            self.add_button.pack(side="left", fill="x", expand=True)
+        else:
+            self.apply_button = tb.Button(button_frame, text="Apply", command=self.apply_changes, bootstyle="light")
+            self.apply_button.pack(side="left", fill="x", expand=True)
+
+            self.delete_button = tb.Button(button_frame, text="Delete", command=self.delete_line, bootstyle="danger")
+            self.delete_button.pack(side="left")
+
+
+    def add_line(self):
+        vertex1 = app.model.add(Vertex(None, float(self.x1_entry.get()), float(self.y1_entry.get())))
+        vertex2 = app.model.add(Vertex(None, float(self.x2_entry.get()), float(self.y2_entry.get())))
+        app.post_edit_element(Line(None, vertex1, vertex2, self.comment_entry.get()))
+        self.x1_entry.delete(0, tb.END)
+        self.y1_entry.delete(0, tb.END)
+        self.x2_entry.delete(0, tb.END)
+        self.y2_entry.delete(0, tb.END)
+        self.x1_entry.insert(0, vertex2.x)
+        self.y1_entry.insert(0, vertex2.y)
+        self.x2_entry.insert(0, "0")
+        self.y2_entry.insert(0, "0")
+
+    def apply_changes(self):
+        self.selected_line.start.x = float(self.x1_entry.get())
+        self.selected_line.start.y = float(self.y1_entry.get())
+        self.selected_line.end.x = float(self.x2_entry.get())
+        self.selected_line.end.y = float(self.y2_entry.get())
+        self.selected_line.comment = self.comment_entry.get()
+        app.post_edit_element(self.selected_line)
+        self.destroy()
+
+    def delete_line(self):
+        app.post_delete_element(self.selected_line)
+        self.destroy()
+
+    def on_close(self, event=None):
+        if self.mode:
+            self.destroy()
+        else:
+            app.create_line(None)
+
 
 class StructuralAnalysisApp:
     def __init__(self, root):
@@ -96,6 +196,11 @@ class StructuralAnalysisApp:
         self.middle_y = 0
         self.scale = 100
         self.snap = 2
+        self.display_settings = {
+            "vertex_id": 1,
+            "vertex_coords": 1,
+            "line_id": 1,
+        }
 
          # Grid setup
         self.top_panel = tb.PanedWindow(self.root, orient=VERTICAL, bootstyle="light")
@@ -137,23 +242,27 @@ class StructuralAnalysisApp:
         self.is_creating_vertex = False
         self.is_creating_line = False
         self.selected_vertex = None
+        self.creating_line = None
 
         self.update_coordinates_thread()
 
         self.dragging = False  # Flag to indicate if dragging is in progress
-        self.dragged_vertex = None  # Index of the vertex being dragged
+        self.dragged_element = None  # Index of the vertex being dragged
         self.drag_start = None  # Initial mouse position when dragging started
         self.view_drag_start = None  # Initial mouse position for scrolling
-        self.current_vertex_dialog = None
+        self.current_element_dialog = None
 
         self.canvas.bind("<Configure>", self.update_middle)
         self.canvas.bind("<Button-1>", self.on_mouse_press)
         self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_release)
-        self.canvas.bind("<Double-Button-1>", self.edit_vertex)
+        self.canvas.bind("<Double-Button-1>", self.on_double_edit_element)
         self.canvas.bind("<Button-2>", self.on_scroll_press)  # Middle mouse button
         self.canvas.bind("<B2-Motion>", self.on_scroll_drag)  # Middle mouse button
         self.canvas.bind("<MouseWheel>", self.on_mouse_wheel)
+
+        self.root.bind("<Escape>", self.clear_selected_items)
+        self.root.bind("<Delete>", self.erase_selected_items)
 
         self.init_drawing()
 
@@ -177,16 +286,22 @@ class StructuralAnalysisApp:
     def edit_item(self):
         item = self.model.get_item_by_treeview(int(self.tree.selection()[0]))
         if type(item) == Vertex:
-            self.current_vertex_dialog.destroy()
-            self.open_vertex_dialog(VertexDialog(self.root, item))
+            if self.current_element_dialog:
+                self.current_element_dialog.destroy()
+            self.open_element_dialog(VertexDialog(self.root, item))
+            return
+        elif type(item) == Line:
+            if self.current_element_dialog:
+                self.current_element_dialog.destroy()
+            self.open_element_dialog(LineDialog(self.root, item))
             return
 
         print(f"Edit item: {self.tree.selection()[0]}")
 
     def delete_item(self):
         item = self.model.get_item_by_treeview(int(self.tree.selection()[0]))
-        if type(item) == Vertex:
-            self.post_delete_vertex(item)
+        if type(item) == Vertex or type(item) == Line:
+            self.post_delete_element(item)
             return
 
         print(f"Delete item: {self.tree.selection()[0]}")
@@ -210,47 +325,121 @@ class StructuralAnalysisApp:
         if item:
             self.context_menu.post(event.x_root, event.y_root)
 
+    def clear_selected_items(self, event):
+        """
+        - Clean list of selected items
+        - Clean previous vertex while line create
+        after pressing ESC.
+        """
+        self.selected_items = []
+        self.creating_line = None
+        self.redraw_canvas()
+
+    def erase_selected_items(self, event):
+        for item in self.selected_items:
+            self.model.delete(item)
+        self.selected_items = []
+        self.redraw_canvas()
+        self.update_treeview()
+
     def on_mouse_press(self, event):
-        x, y = event.x, event.y
-        if self.is_creating_vertex:
+
+        def create_vertex_element():
             v_x, v_y = self.model_space_location(x, y)
-            vertex = Vertex(self.new_id(self.model.vertices), v_x, v_y)
-            self.model.vertices.append(vertex)
+            vertex = Vertex(None, v_x, v_y)
+            self.model.add(vertex)
             self.draw_vertex(vertex)
-        else:
+            return vertex
+        
+        def check_if_vertex_pressed():
             for vertex in self.model.vertices:
-                vertex_index, v_x, v_y = vertex.id, vertex.x, vertex.y
-                screen_x, screen_y = self.screen_space_location(v_x, v_y)
+                screen_x, screen_y = self.screen_space_location(vertex.x, vertex.y)
                 distance = math.sqrt((x - screen_x)**2 + (y - screen_y)**2)
                 if distance <= 5:
-                    self.select_vertex(vertex)
-                    self.drag_start = (x, y)
-                    self.dragging = False  # Don't start dragging until the mouse moves a certain distance
-                    self.dragged_vertex = vertex_index
-                    break
+                    self.select_element(vertex)
+                    return vertex
+            return False
+
+        def check_if_line_pressed():
+            for line in self.model.lines:
+                x1, y1 = self.screen_space_location(line.start.x, line.start.y)
+                x2, y2 = self.screen_space_location(line.end.x, line.end.y)
+                distance_to_line = distance_from_point_to_line(x, y, x1, y1, x2, y2)
+                if distance_to_line <= 3:
+                    self.select_element(line)
+                    return line
+        
+
+        x, y = event.x, event.y
+
+        if self.is_creating_vertex:
+            if not check_if_vertex_pressed():
+                create_vertex_element()
+
+        elif self.is_creating_line:
+            if not self.selected_items:
+                if not self.creating_line:
+                    if not (next_vertex := check_if_vertex_pressed()):
+                        self.creating_line = create_vertex_element()
+                    else:
+                        self.creating_line = next_vertex
+                else:
+                    if not (next_vertex := check_if_vertex_pressed()):
+                        next_vertex = create_vertex_element()
+                    self.model.add(Line(None, self.creating_line, next_vertex))
+                    self.creating_line = next_vertex
+            elif len(self.selected_items) == 1:
+                if type(self.selected_items[0]) == Vertex:
+                    if not (next_vertex := check_if_vertex_pressed()):
+                        next_vertex = create_vertex_element()
+                    if self.selected_items:
+                        self.model.add(Line(None, self.selected_items[0], next_vertex))
+                        self.creating_line = next_vertex
+                        self.selected_items = []
+
+            self.redraw_canvas()
+
+
+        else:
+            if vertex := check_if_vertex_pressed():
+                self.drag_start = (x, y)
+                self.dragging = False  # Don't start dragging until the mouse moves a certain distance
+                self.dragged_element = vertex
+            elif line := check_if_line_pressed():
+                self.drag_start = (x, y)
+                self.dragging = False  # Don't start dragging until the mouse moves a certain distance
+                self.dragged_element = line
             else:
                 self.selected_items = []
                 self.redraw_canvas()
 
     def on_mouse_drag(self, event):
-        if self.dragged_vertex is not None:
+        if self.dragged_element is not None:
+            x, y = event.x, event.y
             if not self.dragging:
-                x, y = event.x, event.y
                 distance = math.sqrt((x - self.drag_start[0])**2 + (y - self.drag_start[1])**2)
                 if distance >= 20:
                     self.dragging = True
             if self.dragging:
-                x, y = event.x, event.y
                 v_x, v_y = self.model_space_location(x, y)
-                vertex_to_move = next((vertex for vertex in self.model.vertices if vertex.id == self.dragged_vertex), None)
-                if vertex_to_move is not None:
-                    vertex_to_move.x = v_x
-                    vertex_to_move.y = v_y
+                if type(self.dragged_element) == Vertex:
+                    self.dragged_element.x = v_x
+                    self.dragged_element.y = v_y
+                    self.redraw_canvas()
+                elif type(self.dragged_element) == Line:
+                    dx = x - self.drag_start[0]
+                    dy = y - self.drag_start[1]
+                    v_dx, v_dy = dx / self.scale, dy / self.scale
+                    self.dragged_element.start.x += v_dx
+                    self.dragged_element.start.y -= v_dy
+                    self.dragged_element.end.x += v_dx
+                    self.dragged_element.end.y -= v_dy
+                    self.drag_start = self.drag_start[0] + dx, self.drag_start[1] + dy
                     self.redraw_canvas()
 
     def on_mouse_release(self, event):
         self.dragging = False
-        self.dragged_vertex = None
+        self.dragged_element = None
         self.update_treeview()
 
     def on_scroll_press(self, event):
@@ -270,7 +459,7 @@ class StructuralAnalysisApp:
                 self.view_drag_start = (x, y)
                 self.redraw_canvas()
 
-    def edit_vertex(self, event):
+    def on_double_edit_element(self, event):
         if not self.dragging:
             x, y = event.x, event.y
             for vertex in self.model.vertices:
@@ -280,14 +469,15 @@ class StructuralAnalysisApp:
                 if distance <= 5:
                     self.selected_vertex = vertex_index
                     v_x, v_y = vertex.x, vertex.y
-                    self.current_vertex_dialog.destroy()
-                    self.open_vertex_dialog(VertexDialog(self.root, vertex))
+                    if self.current_element_dialog:
+                        self.current_element_dialog.destroy()
+                    self.open_element_dialog(VertexDialog(self.root, vertex))
                     break
     
-    def open_vertex_dialog(self, vertex_dialog):
-        if self.current_vertex_dialog:
-            self.current_vertex_dialog.destroy()
-        self.current_vertex_dialog = vertex_dialog
+    def open_element_dialog(self, element_dialog):
+        if self.current_element_dialog:
+            self.current_element_dialog.destroy()
+        self.current_element_dialog = element_dialog    
 
     def create_vertex(self, event):
         """
@@ -296,11 +486,11 @@ class StructuralAnalysisApp:
         if self.is_creating_vertex == False:
             self.is_creating_vertex = not self.is_creating_vertex
             self.create_vertex_button.config(bootstyle="success")
-            self.open_vertex_dialog(VertexDialog(self.root, Vertex(None, 0, 0), mode=0))
+            self.open_element_dialog(VertexDialog(self.root, Vertex(None, 0, 0), mode=0))
         else:
             self.is_creating_vertex = not self.is_creating_vertex
-            if self.current_vertex_dialog:
-                self.current_vertex_dialog.destroy()
+            if self.current_element_dialog:
+                self.current_element_dialog.destroy()
             self.create_vertex_button.config(bootstyle="light")
 
     def create_line(self, event):
@@ -310,38 +500,34 @@ class StructuralAnalysisApp:
         if self.is_creating_line == False:
             self.is_creating_line = not self.is_creating_line
             self.create_line_button.config(bootstyle="success")
-            # self.open_line_dialog(VertexDialog(self.root, Vertex(None, 0, 0), mode=0))
+            self.open_element_dialog(LineDialog(self.root, Line(None, Vertex(None, 0, 0), Vertex(None, 0, 0)), mode=0))
         else:
             self.is_creating_line = not self.is_creating_line
-            # if self.current_line_dialog:
-            #     self.current_line_dialog.destroy()
+            if self.current_element_dialog:
+                self.current_element_dialog.destroy()
             self.create_line_button.config(bootstyle="light")
+            self.creating_line = None
 
     def canvas_click(self, event):
         if self.is_creating_vertex:
             v_x, v_y = self.model_space_location(event.x, event.y)
-            vertex = Vertex(self.new_id(self.vertices), v_x, v_y)
-            self.model.vertices.append(vertex)
+            vertex = Vertex(None, v_x, v_y)
+            self.model.add(vertex)
             self.draw_vertex(vertex)
 
-    def post_edit_vertex(self, selected_vertex):
-        if selected_vertex.id == None:
-            self.model.vertices.append(Vertex(self.new_id(self.model.vertices),selected_vertex.x,selected_vertex.y,selected_vertex.comment))
+    def post_edit_element(self, element):
+        if element.id == None:
+            self.model.add(element)
         else:
-            vertex_to_edit = next((vertex for vertex in self.model.vertices if vertex.id == selected_vertex.id), None)
-            if vertex_to_edit is not None:
-                vertex_to_edit.x = selected_vertex.x
-                vertex_to_edit.y = selected_vertex.y
+            self.model.edit(element)
 
         self.redraw_canvas()
         self.update_treeview()
 
-    def post_delete_vertex(self, selected_vertex):
-        index_to_delete = next((index for index, vertex in enumerate(self.model.vertices) if vertex.id == selected_vertex.id), None)
-        if index_to_delete is not None:
-            self.model.vertices.pop(index_to_delete)
-            self.redraw_canvas()
-            self.update_treeview()
+    def post_delete_element(self, element):
+        self.model.delete(element)
+        self.redraw_canvas()
+        self.update_treeview()
 
     def redraw_canvas(self):
         self.canvas.delete("all")
@@ -367,24 +553,31 @@ class StructuralAnalysisApp:
         outline_color = selected_color_outline if vertex in self.selected_items else "DarkOliveGreen3"
 
         self.canvas.create_oval(x - 4, y - 4, x + 4, y + 4, fill=fill_color, outline=outline_color)
-        self.canvas.create_text(x, y - 15, text=f"({vertex.x:.2f}, {vertex.y:.2f})", fill="gray")
-        self.canvas.create_text(x, y + 15, text=f"{vertex.id}", fill="gray")
+        if self.display_settings['vertex_coords']:
+            self.canvas.create_text(x, y - 15, text=f"({vertex.x:.2f}, {vertex.y:.2f})", fill="gray")
+        if self.display_settings['vertex_id']:
+            self.canvas.create_text(x, y + 15, text=f"{vertex.id}", fill="gray")
 
-    def select_vertex(self, vertex):
-        if vertex in self.selected_items:
-            self.selected_items.remove(vertex)
+    def select_element(self, element):
+        if element in self.selected_items:
+            self.selected_items.remove(element)
         else:
-            self.selected_items.append(vertex)
+            self.selected_items.append(element)
         self.redraw_canvas()
         
     def draw_line(self, line):
         x1, y1 = self.screen_space_location(line.start.x, line.start.y)
         x2, y2 = self.screen_space_location(line.end.x, line.end.y)
     
-        selected_color = "Red"  # Color for selected vertices
+        selected_color = "Light Coral"
         fill_color = selected_color if line in self.selected_items else "White"
 
         self.canvas.create_line(x1, y1, x2, y2, fill=fill_color, width=3)
+        if self.display_settings['line_id']:
+            angle = -math.degrees(math.atan2(y2 - y1, x2 - x1))
+            x_mid = (x1 + x2) / 2
+            y_mid = (y1 + y2) / 2
+            self.canvas.create_text(x_mid, y_mid, angle=angle, text=f"{line.id}", fill="gray", anchor="s")
 
     def update_coordinates_thread(self):
         """
@@ -442,20 +635,14 @@ class StructuralAnalysisApp:
         self.middle_y = event.height / 2
         self.redraw_canvas()
         # print(self.bottom_panel.sashpos(0))
-
-    def new_id(self, element_list):
-        print(element_list)
-        if not element_list:
-            return 0
-        return max(element_list, key=lambda ele: ele.id).id + 1
     
     def init_drawing(self):
         v0 = Vertex(0, 1, 1)
         v1 = Vertex(1, 1, 2)
-        self.model.vertices.append(v0)
-        self.model.vertices.append(v1)
-        self.model.vertices.append(Vertex(2, 2, 1))
-        self.model.lines.append(Line(0, v0, v1))
+        self.model.add(v0)
+        self.model.add(v1)
+        self.model.add(Vertex(2, 2, 1))
+        self.model.add(Line(0, v0, v1))
 
 if __name__ == "__main__":
     # root = tk.Tk()
