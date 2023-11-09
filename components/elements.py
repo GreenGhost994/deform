@@ -8,7 +8,7 @@ class Vertex:
     comment: str = ""
 
 @dataclass
-class Line:
+class Bar:
     id: int
     start: Vertex
     end: Vertex
@@ -21,33 +21,71 @@ class Line:
         return (dx ** 2 + dy ** 2) ** 0.5
 
 @dataclass
+class LoadCase:
+    id: int
+    name: str = ""
+
+@dataclass
+class Load:
+    id: int
+    comment: str = ""
+
+@dataclass
+class Support:
+    id: int
+    comment: str = ""
+
+@dataclass
+class Section:
+    id: int
+    name: str = ""
+
+@dataclass
+class Material:
+    id: int
+    name: str = ""
+
+@dataclass
 class Model:
     vertices: list = field(default_factory=lambda: [])
-    lines: list = field(default_factory=lambda: [])
+    bars: list = field(default_factory=lambda: [])
+    sections: list = field(default_factory=lambda: [])
+    load_cases: list = field(default_factory=lambda: [])
+    loads: list = field(default_factory=lambda: [])
+    supports: list = field(default_factory=lambda: [])
+    materials: list = field(default_factory=lambda: [])
 
     def as_treeview(self):
-        names = ['Vertices', 'Lines']
+        names = ['Vertices', 'Bars', 'Sections', 'Materials']
         moves = []
         counter = len(names)
         for i, x in enumerate(self.vertices):
             names.append(f'{x.id}: {x.x:.2f}, {x.y:.2f}')
             moves.append((counter, 0, i))
             counter += 1
-        for i, x in enumerate(self.lines):
+        for i, x in enumerate(self.bars):
             names.append(f'{x.id}: {x.start.id}, {x.end.id} L={x.length:.2f}')
+            moves.append((counter, 1, i))
+            counter += 1
+        for i, x in enumerate(self.sections):
+            names.append(f'{x.id}: {x.name}')
+            moves.append((counter, 1, i))
+            counter += 1
+        for i, x in enumerate(self.materials):
+            names.append(f'{x.id}: {x.name}')
             moves.append((counter, 1, i))
             counter += 1
         return names, moves
     
     def get_item_by_treeview(self, id):
-        counter = 1
+        counter = 3
         for i in self.__dict__.values():
             for j in i:
                 counter += 1
                 if id == counter:
                     return j
 
-    def add(self, element: Vertex | Line) -> Vertex | Line:
+    def add(self, element: Vertex | Bar) -> Vertex | Bar:
         """
         Add element to model.
         """
@@ -63,10 +101,10 @@ class Model:
             if not element.id:
                 element.id = new_id(self.vertices)
             self.vertices.append(element)
-        elif type(element) == Line:
+        elif type(element) == Bar:
             if not element.id:
-                element.id = new_id(self.lines)
-            self.lines.append(element)
+                element.id = new_id(self.bars)
+            self.bars.append(element)
         return element
 
     def delete(self, element):
@@ -75,9 +113,9 @@ class Model:
         """
         if type(element) == Vertex:
             self.vertices.remove(element)
-            self.lines = [line for line in self.lines if line.start != element and line.end != element]
-        elif type(element) == Line:
-            self.lines.remove(element)
+            self.bars = [bar for bar in self.bars if bar.start != element and bar.end != element]
+        elif type(element) == Bar:
+            self.bars.remove(element)
 
     def edit(self, element):
         """
@@ -87,7 +125,7 @@ class Model:
             vertex_to_edit = next((vertex for vertex in self.vertices if vertex.id == element.id), None)
             if vertex_to_edit is not None:
                 vertex_to_edit = element
-        elif type(element) == Line:
-            line_to_edit = next((line for line in self.vertices if line.id == element.id), None)
-            if line_to_edit is not None:
-                line_to_edit = element
+        elif type(element) == Bar:
+            bar_to_edit = next((bar for bar in self.vertices if bar.id == element.id), None)
+            if bar_to_edit is not None:
+                bar_to_edit = element
